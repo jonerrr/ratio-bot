@@ -9,11 +9,13 @@ client.on("ready", () => {
 
 client.on("message", async (message) => {
   try {
+    const content = message.content.toLowerCase();
     if (
-      message.content.endsWith("+ ratio") ||
-      message.content.endsWith("+ratio") ||
-      message.content.endsWith("{+ ratio}") ||
-      message.content.endsWith("(+ratio)")
+      content.endsWith("+ ratio") ||
+      content.endsWith("+ratio") ||
+      content.endsWith("{+ ratio}") ||
+      content.endsWith("(+ratio)") ||
+      content.endsWith("ratio")
     ) {
       message.react("👍");
       const messages = await message.channel.messages.fetch({ limit: 2 });
