@@ -18,8 +18,15 @@ client.on("message", async (message) => {
       content.endsWith("ratio")
     ) {
       message.react("👍");
-      const messages = await message.channel.messages.fetch({ limit: 2 });
-      const msg = Array.from(messages.values())[1];
+      let msg;
+
+      if (message.reference)
+        msg = await message.channel.messages.fetch(message.reference.messageID);
+      else {
+        const messages = await message.channel.messages.fetch({ limit: 2 });
+        msg = Array.from(messages.values())[1];
+      }
+
       msg.react("👍");
     }
   } catch (e) {
