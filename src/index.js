@@ -18,18 +18,20 @@ client.on("message", async (message) => {
       content.endsWith("ratio")
     ) {
       message.react("👍");
-      let msg;
 
-      if (message.reference)
-        msg = await message.channel.messages.fetch(message.reference.messageID);
-      else {
-        const messages = await message.channel.messages.fetch({ limit: 30 });
-        const messagesArray = Array.from(messages.values());
-
-        for (let i = 0; i < messagesArray.length; i++)
-          if (messagesArray[i].author.id !== message.author.id)
-            return messagesArray[i].react("👍");
+      if (message.reference) {
+        const msg = await message.channel.messages.fetch(
+          message.reference.messageID
+        );
+        return msg.react("👍");
       }
+
+      const messages = await message.channel.messages.fetch({ limit: 30 });
+      const messagesArray = Array.from(messages.values());
+
+      for (let i = 0; i < messagesArray.length; i++)
+        if (messagesArray[i].author.id !== message.author.id)
+          return messagesArray[i].react("👍");
     }
   } catch (e) {
     console.log(e);
