@@ -21,6 +21,21 @@ client.on("message", async (message) => {
           )
       );
     if (
+      (content.startsWith("ratio ") ||
+        content.startsWith("+ ratio") ||
+        content.startsWith("+ratio")) &&
+      message.mentions.users.first() &&
+      message.mentions.users.first().id !== message.author.id
+    ) {
+      message.react("👍");
+      const messages = await message.channel.messages.fetch({ limit: 70 });
+      const messagesArray = Array.from(messages.values());
+      for (let i = 0; i < messagesArray.length; i++)
+        if (messagesArray[i].author.id === message.mentions.users.first().id)
+          return messagesArray[i].react("👍");
+    }
+
+    if (
       content.endsWith("+ ratio") ||
       content.endsWith("+ratio") ||
       content.endsWith("{+ ratio}") ||
