@@ -5,11 +5,21 @@ const config = require("../config.json");
 
 client.on("ready", () => {
   console.log(`Logged in as: ${client.user.tag}`);
+  client.user.setActivity(",invite", { type: "WATCHING" });
 });
 
 client.on("message", async (message) => {
   try {
     const content = message.content.toLowerCase();
+
+    if (content === ",invite")
+      message.channel.send(
+        new Discord.MessageEmbed()
+          .setTitle("Invite")
+          .setDescription(
+            `https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=0&scope=bot`
+          )
+      );
     if (
       content.endsWith("+ ratio") ||
       content.endsWith("+ratio") ||
