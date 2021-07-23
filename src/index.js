@@ -15,4 +15,8 @@ client.on("raw", (packet) => parseReaction(packet, client));
 
 client.on("message", (message) => parseMessage(message, client));
 
+client.on("messageUpdate", (oldMessage, newMessage) =>
+  parseMessage(newMessage, client)
+);
+
 client.login(config.token);
