@@ -3,7 +3,7 @@ const fs = require("fs");
 const words = ["+ratio", "(+ratio)", "ratio", "(ratio)"];
 
 const exec = async (message, client) => {
-  if (message.author.bot || message.author.id !== "781599562388471819") return;
+  if (message.author.bot) return;
 
   const body = message.content.toLowerCase().split(" ");
   const start = body.slice(0, 2);
