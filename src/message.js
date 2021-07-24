@@ -21,15 +21,15 @@ const check = (content) => {
 const exec = async (message, client) => {
   if (message.author.bot) return;
 
-  if (message.content.toLowerCase() === "+lb" || "+leaderboard") {
-    // queries.lb();
-    return message.channel.send(
-      new MessageEmbed()
-        .setTitle("Ratio Leaderboards")
-        .setColor("#5049dd")
-        .setDescription("```Soon```")
-    );
-  }
+  // if (message.content.toLowerCase() === "+lb" || "+leaderboard") {
+  //   // queries.lb();
+  //   return message.channel.send(
+  //     new MessageEmbed()
+  //       .setTitle("Ratio Leaderboard")
+  //       .setColor("#5049dd")
+  //       .setDescription("```soon```")
+  //   );
+  // }
 
   if (check(message.content.toLowerCase())) {
     message.react(config.emoji);
