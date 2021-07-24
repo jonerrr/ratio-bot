@@ -1,38 +1,20 @@
-const exec = (packet, client) => {
-  if (!["MESSAGE_REACTION_ADD", "MESSAGE_REACTION_REMOVE"].includes(packet.t))
+const queries = require("./queries");
+const eventsArr = ["MESSAGE_REACTION_ADD", "MESSAGE_REACTION_REMOVE"];
+const eventsObj = {
+  MESSAGE_REACTION_ADD: 1,
+  MESSAGE_REACTION_REMOVE: -1,
+};
+
+const exec = async (packet, client) => {
+  if (
+    !eventsArr.includes(packet.t) ||
+    !packet.d.emoji ||
+    packet.d.emoji.id !== "868566740718719017" ||
+    (packet.d.member && packet.d.member.user.id === client.user.id)
+  )
     return;
 
-  const channel = client.channels.cache.get(packet.d.channel_id);
-  if (channel.messages.cache.has(packet.d.message_id)) return;
-
-  channel.messages.fetch(packet.d.message_id).then((message) => {
-    const emoji = packet.d.emoji.id
-      ? `${packet.d.emoji.name}:${packet.d.emoji.id}`
-      : packet.d.emoji.name;
-    const reaction = message.reactions.cache.get(emoji);
-
-    if (reaction)
-      reaction.users.cache.set(
-        packet.d.user_id,
-        client.users.cache.get(packet.d.user_id)
-      );
-
-    if (packet.t === "MESSAGE_REACTION_ADD") {
-      client.emit(
-        "messageReactionAdd",
-        reaction,
-        client.users.cache.get(packet.d.user_id)
-      );
-    }
-
-    if (packet.t === "MESSAGE_REACTION_REMOVE") {
-      client.emit(
-        "messageReactionRemove",
-        reaction,
-        client.users.cache.get(packet.d.user_id)
-      );
-    }
-  });
+  await queries.update(packet.d.message_id, eventsObj[packet.t]);
 };
 
 module.exports = exec;

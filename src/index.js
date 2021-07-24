@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Discord = require("discord.js");
 const client = new Discord.Client();
 
@@ -18,3 +19,7 @@ client.on("message", (message) => parseMessage(message, client));
 client.on("messageUpdate", (_, message) => parseMessage(message, client));
 
 client.login(config.token);
+mongoose.connect(config.uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});

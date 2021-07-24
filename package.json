@@ -10,6 +10,8 @@
   "author": "jonah",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.5.3"
+    "discord.js": "^12.5.3",
+    "emojis": "^1.0.10",
+    "mongoose": "^5.13.3"
   }
 }
