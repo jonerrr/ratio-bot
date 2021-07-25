@@ -58,9 +58,8 @@ const exec = async (message, client) => {
 
     for (const msg of messages)
       if (
-        msg.author.id !== message.author.id ||
-        (message.mentions.users.size &&
-          message.mentions.users.first().id === msg.author.id)
+        message.mentions.users.first().id === msg.author.id ||
+        (!message.mentions.users.size && msg.author.id !== message.author.id)
       ) {
         msg.react(config.emoji);
         return await queries.save(message, msg);
