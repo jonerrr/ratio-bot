@@ -1,6 +1,19 @@
 const emojis = require("emojis");
+const { MessageEmbed } = require("discord.js");
 
 const ratio = require("./schema");
+const numbers = {
+  0: ":one:",
+  1: ":two:",
+  2: ":three:",
+  3: ":four:",
+  4: ":five:",
+  5: ":six:",
+  6: ":seven:",
+  7: ":eight:",
+  8: ":nine:",
+  9: ":keycap_ten:",
+};
 
 const parse = (content) => {
   const parsedEmojis = emojis.unicode(content);
@@ -54,9 +67,60 @@ const update = async (id, likes) => {
       );
 };
 
+const md = "`";
+let cacheExpire = Date.now() + 300000;
+let cache;
+
 const lb = async () => {
-  const likes1 = await ratio.find({ message1Likes: { $gt: 1 } });
-  const likes2 = await ratio.find({ message1Likes: { $gt: 1 } });
+  let ratios = cache;
+
+  if (cacheExpire < Date.now() || !cache) {
+    ratios = await ratio.find();
+    cache = ratios;
+  }
+
+  const likesArray = [];
+
+  for (const r of ratios) {
+    likesArray.push({
+      username: r.message1Owner.username,
+      avatar: r.message1Owner.avatar,
+      likes: r.message1Likes,
+      tim: r.time,
+      reference: {
+        username: r.message2Owner.username,
+        avatar: r.message2Owner.avatar,
+        likes: r.message2Likes,
+      },
+    });
+    likesArray.push({
+      username: r.message2Owner.username,
+      likes: r.message2Likes,
+      tim: r.time,
+      reference: {
+        username: r.message1Owner.username,
+        likes: r.message1Likes,
+      },
+    });
+  }
+
+  likesArray.sort((a, b) => b.likes - a.likes);
+
+  const embed = new MessageEmbed()
+    .setTitle("Ratio Leaderboard")
+    .setColor("#5049dd");
+
+  for (i = 0; i < 10; i++)
+    embed.addField(
+      `${numbers[i]} ${likesArray[i].username}: ${likesArray[i].likes} like${
+        likesArray[i].likes > 1 ? "s" : ""
+      }`,
+      `${likesArray[i].reference.username}: ${
+        likesArray[i].reference.likes
+      } like${likesArray[i].likes > 1 ? "s" : ""}`
+    );
+
+  return embed;
 };
 
 module.exports = { save, update, lb };

@@ -1,5 +1,4 @@
 const fs = require("fs");
-const { MessageEmbed } = require("discord.js");
 const config = require("../config.json");
 const queries = require("./queries");
 
@@ -21,15 +20,11 @@ const check = (content) => {
 const exec = async (message, client) => {
   if (message.author.bot) return;
 
-  // if (message.content.toLowerCase() === "+lb" || "+leaderboard") {
-  //   // queries.lb();
-  //   return message.channel.send(
-  //     new MessageEmbed()
-  //       .setTitle("Ratio Leaderboard")
-  //       .setColor("#5049dd")
-  //       .setDescription("```soon```")
-  //   );
-  // }
+  if (
+    message.content.toLowerCase() === "+lb" ||
+    message.content.toLowerCase() === "+leaderboard"
+  )
+    return message.channel.send(await queries.lb());
 
   if (check(message.content.toLowerCase())) {
     message.react(config.emoji);
