@@ -1,4 +1,5 @@
 const emojis = require("emojis");
+const { nanoid } = require("nanoid");
 const { MessageEmbed } = require("discord.js");
 
 const ratio = require("./schema");
@@ -27,51 +28,39 @@ const parse = (content) => {
   return parsed;
 };
 
-const save = async (msg1, msg2) =>
+const save = async (msg1, msg2) => {
+  const _id = [nanoid(), nanoid()];
+
   await new ratio({
-    message1: msg1.id,
-    message1Owner: {
-      username: msg1.author.username,
-      avatar: msg1.author.avatar
-        ? `https://cdn.discordapp.com/avatars/${msg1.author.id}/${msg1.author.avatar}`
-        : `https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png`,
-      content: parse(msg1.content),
-    },
-
-    message2: msg2.id,
-    message2Owner: {
-      username: msg2.author.username,
-      avatar: msg2.author.avatar
-        ? `https://cdn.discordapp.com/avatars/${msg2.author.id}/${msg2.author.avatar}`
-        : `https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png`,
-      content: parse(msg2.content),
-    },
+    _id: _id[0],
+    likes: 1,
+    content: parse(msg1.content),
+    message: msg1.id,
+    author: msg1.author,
+    link: msg1.url,
+    related: _id[1],
   }).save();
-
-const update = async (id, likes) => {
-  let message1 = true;
-  let data = await ratio.findOne({ message1: id });
-  if (!data) {
-    data = await ratio.findOne({ message2: id });
-    message1 = false;
-  }
-
-  message1
-    ? await ratio.updateOne(
-        { _id: data._id },
-        { message1Likes: data.message1Likes + likes }
-      )
-    : await ratio.updateOne(
-        { _id: data._id },
-        { message2Likes: data.message2Likes + likes }
-      );
+  await new ratio({
+    _id: _id[1],
+    likes: 1,
+    content: parse(msg2.content),
+    message: msg2.id,
+    author: msg2.author,
+    link: msg2.url,
+    related: _id[0],
+  }).save();
 };
 
-const md = "`";
+const update = async (id, likes) => {
+  const r = await ratio.findOne({ message: id });
+  await ratio.updateOne({ _id: r._id }, { likes: r.likes + likes });
+};
+
 let cacheExpire = Date.now() + 300000;
 let cache;
 
 const lb = async () => {
+  return "coming back soon";
   let ratios = cache;
 
   if (cacheExpire < Date.now() || !cache) {
@@ -79,48 +68,29 @@ const lb = async () => {
     cache = ratios;
   }
 
-  const likesArray = [];
+  const ratiosObj = {};
 
-  for (const r of ratios) {
-    likesArray.push({
-      username: r.message1Owner.username,
-      avatar: r.message1Owner.avatar,
-      likes: r.message1Likes,
-      tim: r.time,
-      reference: {
-        username: r.message2Owner.username,
-        avatar: r.message2Owner.avatar,
-        likes: r.message2Likes,
-      },
-    });
-    likesArray.push({
-      username: r.message2Owner.username,
-      likes: r.message2Likes,
-      tim: r.time,
-      reference: {
-        username: r.message1Owner.username,
-        likes: r.message1Likes,
-      },
-    });
-  }
+  ratios.sort((a, b) => b.likes - a.likes);
 
-  likesArray.sort((a, b) => b.likes - a.likes);
+  ratios.forEach((r) => (ratiosObj[r._id] = r));
 
-  const embed = new MessageEmbed()
-    .setTitle("Ratio Leaderboard")
-    .setColor("#5049dd");
+  console.log(ratiosObj);
 
-  for (i = 0; i < 10; i++)
-    embed.addField(
-      `${numbers[i]} ${likesArray[i].username}: ${likesArray[i].likes} like${
-        likesArray[i].likes > 1 ? "s" : ""
-      }`,
-      `${likesArray[i].reference.username}: ${
-        likesArray[i].reference.likes
-      } like${likesArray[i].likes > 1 ? "s" : ""}`
-    );
+  // const embed = new MessageEmbed()
+  //   .setTitle("Ratio Leaderboard")
+  //   .setColor("#5049dd");
 
-  return embed;
+  // for (i = 0; i < 10; i++)
+  //   embed.addField(
+  //     `${numbers[i]} ${likesArray[i].username}: ${likesArray[i].likes} like${
+  //       likesArray[i].likes > 1 ? "s" : ""
+  //     }`,
+  //     `${likesArray[i].reference.username}: ${
+  //       likesArray[i].reference.likes
+  //     } like${likesArray[i].likes > 1 ? "s" : ""}`
+  //   );
+
+  return "ok";
 };
 
 module.exports = { save, update, lb };

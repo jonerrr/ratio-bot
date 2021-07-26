@@ -1,22 +1,13 @@
 const mongoose = require("mongoose");
 
 const ratioSchema = new mongoose.Schema({
-  message1: { type: String },
-  message1Likes: { type: Number, default: 1 },
-  message1Owner: {
-    username: { type: String },
-    avatar: { type: String },
-    content: { type: String },
-  },
-
-  message2: { type: String },
-  message2Likes: { type: Number, default: 1 },
-  message2Owner: {
-    username: { type: String },
-    avatar: { type: String },
-    content: { type: String },
-  },
-
+  _id: { type: String },
+  likes: { type: Number },
+  content: { type: String },
+  message: { type: String },
+  author: { type: String },
+  link: { type: String },
+  related: { type: String },
   time: { type: Number, default: Date.now() },
 });
 
