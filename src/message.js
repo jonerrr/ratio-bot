@@ -1,4 +1,5 @@
 const fs = require("fs");
+const Tesseract = require("tesseract.js");
 const config = require("../config.json");
 const queries = require("./queries");
 
@@ -26,7 +27,7 @@ const exec = async (message, client) => {
   )
     return message.channel.send(await queries.lb());
 
-  if (check(message.content.toLowerCase())) {
+  if (check(message.content.toLowerCase()) || (await scanImage(message))) {
     message.react(config.emoji);
 
     let count = parseInt(fs.readFileSync("./count.txt"));
@@ -65,6 +66,19 @@ const exec = async (message, client) => {
         msg.react(config.emoji);
         return await queries.save(message, msg);
       }
+  }
+};
+
+const scanImage = async (message) => {
+  try {
+    for (const i of message.attachments.values()) {
+      const image = await Tesseract.recognize(i.url);
+
+      return image.data.text.toLowerCase().includes("ratio");
+    }
+  } catch (e) {
+    console.log(e);
+    return false;
   }
 };
 
