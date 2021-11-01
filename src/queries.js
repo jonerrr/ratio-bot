@@ -52,8 +52,12 @@ const save = async (msg1, msg2) => {
 };
 
 const update = async (id, likes) => {
-  const r = await ratio.findOne({ message: id });
-  await ratio.updateOne({ _id: r._id }, { likes: r.likes + likes });
+  try {
+    const r = await ratio.findOne({ message: id });
+    await ratio.updateOne({ _id: r._id }, { likes: r.likes + likes });
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 let cacheExpire = Date.now() + 300000;
