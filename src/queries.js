@@ -34,7 +34,7 @@ const save = async (msg1, msg2) => {
   await new ratio({
     _id: _id[0],
     likes: 1,
-    content: parse(msg1.content),
+    // content: parse(msg1.content),
     message: msg1.id,
     author: msg1.author,
     link: msg1.url,
@@ -43,7 +43,7 @@ const save = async (msg1, msg2) => {
   await new ratio({
     _id: _id[1],
     likes: 1,
-    content: parse(msg2.content),
+    // content: parse(msg2.content),
     message: msg2.id,
     author: msg2.author,
     link: msg2.url,
