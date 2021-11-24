@@ -24,15 +24,6 @@ const client = new Client({
 const rest = new REST({ version: "9" }).setToken(process.env.TOKEN);
 const prisma = new PrismaClient();
 
-const words: string[] = [
-  "+ratio",
-  "+ ratio",
-  "(+ratio)",
-  "ratio",
-  "(ratio)",
-  "(+ ratio)",
-  "+ratio",
-];
 let emojis: string[] = [
   ":one:",
   ":two:",
@@ -66,24 +57,18 @@ client.on("ready", async () => {
       ),
   ].map((command) => command.toJSON());
 
-  process.env.MODE === "DEV"
-    ? await rest.put(
-        Routes.applicationGuildCommands(client.user.id, process.env.GUILD),
-        { body: commands }
-      )
-    : await rest.put(Routes.applicationCommands(client.user.id), {
-        body: commands,
-      });
+  await rest.put(
+    Routes.applicationGuildCommands(client.user.id, process.env.GUILD),
+    { body: commands }
+  );
+  await rest.put(Routes.applicationCommands(client.user.id), {
+    body: commands,
+  });
 });
 
-const check = (content: string): boolean => {
-  for (const word of words)
-    if (content.toLowerCase().includes(word)) return true;
-  return false;
-};
-
 client.on("messageCreate", async (message: Message) => {
-  if (message.author.bot || !check(message.content)) return;
+  if (message.author.bot || !message.content.toLowerCase().includes("ratio"))
+    return;
   await message.react(process.env.EMOJI);
   let msg: Message;
 
@@ -138,9 +123,7 @@ client.on("messageCreate", async (message: Message) => {
 });
 
 client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  if (interaction.commandName === "leaderboard") {
+  if (interaction.isCommand() && interaction.commandName === "leaderboard") {
     await interaction.deferReply();
 
     const operation: any = {
@@ -148,7 +131,7 @@ client.on("interactionCreate", async (interaction) => {
       take: 10,
     };
 
-    if (!interaction.options.getBoolean("global"))
+    if (!interaction.options.getBoolean("global") && interaction.inGuild())
       operation.where = { serverId: interaction.guild.id };
     const ratios = await prisma.ratio.findMany(operation);
 
