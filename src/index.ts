@@ -165,8 +165,10 @@ client.on("interactionCreate", async (interaction) => {
         new MessageEmbed()
           .setTitle("Ratio Leaderboard")
           .setColor("RANDOM")
-          .setDescription(desc)
-          .setFooter(`Ratio Bot • Created by jonah#1234`),
+          .setDescription(
+            desc === "" ? "There are no ratios in this server." : desc
+          ),
+        (1).setFooter(`Ratio Bot • Created by jonah#1234`),
       ],
     });
   }
