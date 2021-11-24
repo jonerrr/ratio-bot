@@ -41,6 +41,7 @@ client.on("ready", async () => {
 
   client.user.setPresence({
     status: "dnd",
+    activities: [{ name: `Ratio Bot ${process.env.MODE}`, type: "PLAYING" }],
   });
 
   const commands = [
@@ -62,58 +63,56 @@ client.on("ready", async () => {
       });
 });
 
-client.on("messageCreate", async (message: Message) => {
-  if (message.author.bot) return;
-
+const check = (content: string): boolean => {
   for (const word of words)
-    if (
-      message.content.toLowerCase().startsWith(word) &&
-      message.content.toLowerCase().endsWith(word)
-    ) {
-      await message.react(process.env.EMOJI);
+    if (content.toLowerCase().includes(word)) return true;
+  return false;
+};
 
-      let msg: Message;
+client.on("messageCreate", async (message: Message) => {
+  if (message.author.bot || !check(message.content)) return;
+  await message.react(process.env.EMOJI);
+  let msg: Message;
 
-      if (message.reference)
-        msg = await message.channel.messages.fetch(message.reference.messageId);
+  if (message.reference)
+    msg = await message.channel.messages.fetch(message.reference.messageId);
 
-      if (!msg) {
-        const msgs: Message[] = Array.from(
-          (await message.channel.messages.fetch()).values()
-        );
+  if (!msg) {
+    const msgs: Message[] = Array.from(
+      (await message.channel.messages.fetch()).values()
+    );
 
-        for (const m of msgs) {
-          if (
-            (message.mentions.users.size &&
-              message.mentions.users.first().id === m.author.id) ||
-            (!message.mentions.users.size && m.author.id !== message.author.id)
-          ) {
-            msg = m;
-            break;
-          }
-        }
+    for (const m of msgs) {
+      if (
+        (message.mentions.users.size &&
+          message.mentions.users.first().id === m.author.id) ||
+        (!message.mentions.users.size && m.author.id !== message.author.id)
+      ) {
+        msg = m;
+        break;
       }
-      await msg.react(process.env.EMOJI);
-
-      await prisma.ratio.createMany({
-        data: [
-          {
-            id: message.id,
-            userId: message.author.id,
-            serverId: message.guild.id,
-            username: message.author.username,
-            related: msg.id,
-          },
-          {
-            id: msg.id,
-            userId: msg.author.id,
-            serverId: msg.guild.id,
-            username: msg.author.username,
-            related: message.id,
-          },
-        ],
-      });
     }
+  }
+  await msg.react(process.env.EMOJI);
+
+  await prisma.ratio.createMany({
+    data: [
+      {
+        id: message.id,
+        userId: message.author.id,
+        serverId: message.guild.id,
+        username: message.author.username,
+        related: msg.id,
+      },
+      {
+        id: msg.id,
+        userId: msg.author.id,
+        serverId: msg.guild.id,
+        username: msg.author.username,
+        related: message.id,
+      },
+    ],
+  });
 
   if (count > Date.now()) return;
   client.user.setPresence({
