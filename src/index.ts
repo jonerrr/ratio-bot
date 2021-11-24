@@ -167,8 +167,8 @@ client.on("interactionCreate", async (interaction) => {
           .setColor("RANDOM")
           .setDescription(
             desc === "" ? "There are no ratios in this server." : desc
-          ),
-        (1).setFooter(`Ratio Bot • Created by jonah#1234`),
+          )
+          .setFooter(`Ratio Bot • Created by jonah#1234`),
       ],
     });
   }
