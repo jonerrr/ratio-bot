@@ -141,6 +141,8 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
 
   if (interaction.commandName === "leaderboard") {
+    await interaction.deferReply();
+
     const operation: any = {
       orderBy: { likes: "desc" },
       take: 10,
@@ -158,7 +160,7 @@ client.on("interactionCreate", async (interaction) => {
       desc += `${emojis[i]} ${ratios[i].username} ${process.env.EMOJI}**${ratios[i].likes}** ${md}≥${md} ${related.username} ${process.env.EMOJI}**${related.likes}**\n\n`;
     }
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         new MessageEmbed()
           .setTitle("Ratio Leaderboard")
