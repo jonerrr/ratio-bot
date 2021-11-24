@@ -24,7 +24,7 @@ const client = new Client({
 const rest = new REST({ version: "9" }).setToken(process.env.TOKEN);
 const prisma = new PrismaClient();
 
-const words = [
+const words: string[] = [
   "+ratio",
   "+ ratio",
   "(+ratio)",
@@ -33,6 +33,19 @@ const words = [
   "(+ ratio)",
   "+ratio",
 ];
+let emojis: string[] = [
+  ":one:",
+  ":two:",
+  ":three:",
+  ":four:",
+  ":five:",
+  ":six:",
+  ":seven:",
+  ":eight:",
+  ":nine:",
+  ":keycap_ten:",
+];
+const md = "`";
 let count: number = Date.now();
 
 client.on("ready", async () => {
@@ -128,33 +141,40 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
 
   if (interaction.commandName === "leaderboard") {
-    const where: any = {};
-    if (interaction.options.getBoolean("Global"))
-      where.serverId = interaction.guild.id;
+    const operation: any = {
+      orderBy: { likes: "desc" },
+      take: 10,
+    };
 
-    // const ratios = await prisma.ratio.findMany({
-    //   where,
-    //   orderBy: { likes: "desc" },
-    // });
+    if (!interaction.options.getBoolean("global"))
+      operation.where = { serverId: interaction.guild.id };
+    const ratios = await prisma.ratio.findMany(operation);
 
-    // console.log(ratios);
+    let desc = "";
+    for (let i = 0; i < ratios.length; i++) {
+      const related = await prisma.ratio.findUnique({
+        where: { id: ratios[i].related },
+      });
+      desc += `${emojis[i]} ${ratios[i].username} ${process.env.EMOJI}**${ratios[i].likes}** ${md}≥${md} ${related.username} ${process.env.EMOJI}**${related.likes}**\n\n`;
+    }
 
     await interaction.reply({
       embeds: [
         new MessageEmbed()
           .setTitle("Ratio Leaderboard")
-          .setDescription("```Coming Soon```"),
+          .setColor("RANDOM")
+          .setDescription(desc)
+          .setFooter(`Ratio Bot • Created by jonah#1234`),
       ],
     });
   }
 });
 
-client.on("messageReactionAdd", (reaction) => manageReaction(reaction, 1));
-client.on("messageReactionRemove", (reaction) => manageReaction(reaction, 0));
+client.on("messageReactionAdd", (reaction) => manageReaction(reaction));
+client.on("messageReactionRemove", (reaction) => manageReaction(reaction));
 
 const manageReaction = async (
-  reaction: MessageReaction | PartialMessageReaction,
-  type: number
+  reaction: MessageReaction | PartialMessageReaction
 ) => {
   if (
     `<:${reaction.emoji.name}:${reaction.emoji.id}>` !== process.env.EMOJI ||
