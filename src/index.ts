@@ -6,6 +6,7 @@ import {
   MessageEmbed,
   MessageReaction,
   PartialMessageReaction,
+  SnowflakeUtil,
 } from "discord.js";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { REST } from "@discordjs/rest";
@@ -212,6 +213,14 @@ const manageReaction = async (
     return;
 
   if (reaction.partial) reaction = await reaction.fetch();
+
+  if (
+    SnowflakeUtil.deconstruct(reaction.message.id).timestamp + 2592000000 >
+    Date.now() - 2592000000
+  ) {
+    await prisma.ratio.delete({ where: { id: reaction.message.id } });
+    return;
+  }
 
   await prisma.ratio.update({
     where: { id: reaction.message.id },
