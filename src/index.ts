@@ -105,6 +105,7 @@ client.on("messageCreate", async (message: Message) => {
           userId: message.author.id,
           serverId: message.guild.id,
           username: message.author.username,
+          expire: Date.now() + 2592000000,
           related: msg.id,
         },
         {
@@ -112,6 +113,7 @@ client.on("messageCreate", async (message: Message) => {
           userId: msg.author.id,
           serverId: msg.guild.id,
           username: msg.author.username,
+          expire: Date.now() + 2592000000,
           related: message.id,
         },
       ],
@@ -150,6 +152,11 @@ client.on("messageCreate", async (message: Message) => {
         },
       ],
     });
+
+    await prisma.ratio.deleteMany({
+      where: { expire: { lt: Date.now() } },
+    });
+
     count = Date.now() + 60000;
   } catch (e) {
     console.log(e);
@@ -213,14 +220,6 @@ const manageReaction = async (
     return;
 
   if (reaction.partial) reaction = await reaction.fetch();
-
-  if (
-    SnowflakeUtil.deconstruct(reaction.message.id).timestamp + 2592000000 >
-    Date.now() - 2592000000
-  ) {
-    await prisma.ratio.delete({ where: { id: reaction.message.id } });
-    return;
-  }
 
   await prisma.ratio.update({
     where: { id: reaction.message.id },

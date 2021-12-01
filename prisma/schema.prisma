@@ -14,5 +14,6 @@ model Ratio {
   userId   String
   serverId String @unique
   username String
+  expire   Int
   related  String @unique
 }
