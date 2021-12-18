@@ -6,16 +6,16 @@ import {
   MessageEmbed,
   MessageReaction,
   PartialMessageReaction,
-  SnowflakeUtil,
 } from "discord.js";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
 import { PrismaClient } from "@prisma/client";
+import { Api } from "@top-gg/sdk";
 import { config } from "dotenv";
-import { readFileSync, writeFileSync } from "fs";
 config();
 
+const topGG = new Api(process.env.TOPGG_TOKEN);
 const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
@@ -41,7 +41,7 @@ let emojis: string[] = [
   ":keycap_ten:",
 ];
 const md = "`";
-let count: number = Date.now();
+let cacheExpire: number = Date.now();
 
 client.on("ready", async () => {
   await prisma.$connect();
@@ -57,7 +57,7 @@ client.on("ready", async () => {
       .setName("leaderboard")
       .setDescription("Ratio Leaderboard")
       .addBooleanOption((option) =>
-        option.setName("global").setDescription("Get global leaderboard")
+        option.setName("global").setDescription("Fetch global leaderboard")
       ),
   ].map((command) => command.toJSON());
 
@@ -74,7 +74,11 @@ client.on("messageCreate", async (message: Message) => {
   if (message.author.bot || !message.content.toLowerCase().includes("ratio"))
     return;
   try {
-    await message.react(process.env.EMOJI);
+    const emoji: string = (await topGG.hasVoted(message.author.id))
+      ? process.env.VOTED_EMOJI
+      : process.env.EMOJI;
+
+    await message.react(emoji);
     let msg: Message;
 
     if (message.reference)
@@ -96,7 +100,7 @@ client.on("messageCreate", async (message: Message) => {
         }
       }
     }
-    await msg.react(process.env.EMOJI);
+    await msg.react(emoji);
 
     await prisma.ratio.createMany({
       data: [
@@ -142,7 +146,7 @@ client.on("messageCreate", async (message: Message) => {
     //   writeFileSync("./servers.json", JSON.stringify(guildCheck));
     // }
 
-    if (count > Date.now()) return;
+    if (cacheExpire > Date.now()) return;
     client.user.setPresence({
       status: "idle",
       activities: [
@@ -153,15 +157,15 @@ client.on("messageCreate", async (message: Message) => {
       ],
     });
 
-    await prisma.ratio.deleteMany({
-      where: { expire: { lt: Date.now() } },
-    });
+    // await prisma.ratio.deleteMany({
+    //   where: { expire: { lt: Date.now() } },
+    // });
 
-    count = Date.now() + 60000;
+    cacheExpire = Date.now() + 60000;
   } catch (e) {
     console.log(e);
     webhookClient.send({
-      content: `THERE WAS ERROR!!!!!!!!!!!!!!!!!!!!`,
+      content: `THERE WAS AN ERROR!!!!!!!!!!!!!!!!!!!!`,
       embeds: [
         new MessageEmbed()
           .setTitle("ERROR")
