@@ -184,7 +184,13 @@ client.on("messageCreate", async (message: Message) => {
 
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isCommand() && interaction.commandName === "leaderboard") {
-    await interaction.deferReply();
+    await interaction.reply({
+      embeds: [
+        new MessageEmbed().setDescription(
+          "Loading <a:loading:921882048216576020"
+        ),
+      ],
+    });
 
     const operation: any = {
       orderBy: { likes: "desc" },
