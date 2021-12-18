@@ -73,7 +73,13 @@ client.on("ready", async () => {
 client.on("messageCreate", async (message: Message) => {
   if (message.author.bot || !message.content.toLowerCase().includes("ratio"))
     return;
+
+  const content = message.content.toLowerCase().split(" ");
+
+  if (content[0] !== "ratio" && content.pop() !== "ratio") return;
+
   try {
+    //(maybe) random colored heart emoji if voted
     const emoji: string = (await topGG.hasVoted(message.author.id))
       ? process.env.VOTED_EMOJI
       : process.env.EMOJI;
@@ -218,7 +224,9 @@ const manageReaction = async (
   reaction: MessageReaction | PartialMessageReaction
 ) => {
   if (
-    `<:${reaction.emoji.name}:${reaction.emoji.id}>` !== process.env.EMOJI ||
+    [process.env.EMOJI, process.env.VOTED_EMOJI].includes(
+      `<:${reaction.emoji.name}:${reaction.emoji.id}>`
+    ) ||
     reaction.count === 1
   )
     return;
