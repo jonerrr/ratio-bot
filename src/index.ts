@@ -161,6 +161,8 @@ client.on("messageCreate", async (message: Message) => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
 
+  // All of this is very repetitive and will be refactored later
+
   switch (interaction.commandName) {
     case "leaderboard":
       await interaction.reply({
@@ -225,24 +227,33 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.editReply({
         embeds: [
           new MessageEmbed()
-            .setTitle(
-              `Ratio Statistics ${
+            // .setTitle(
+            //   `Ratio Statistics ${
+            //     !interaction.options.getBoolean("global") &&
+            //     interaction.inGuild()
+            //       ? `(${interaction.guild.name})`
+            //       : "(global)"
+            //   }`
+            // )
+            .setColor("RANDOM")
+            .setDescription(
+              `**Ratio Statistics ${
                 !interaction.options.getBoolean("global") &&
                 interaction.inGuild()
                   ? `(${interaction.guild.name})`
                   : "(global)"
-              }`
-            )
-            .setColor("RANDOM")
-            .setDescription(
-              `${
+              }**\n${
                 !interaction.options.getBoolean("global") &&
                 interaction.inGuild()
                   ? (await prisma.ratio.count({
                       where: { serverId: interaction.guild.id },
                     })) / 2
                   : (await prisma.ratio.count()) / 2
-              } ratios\n\n*More statistics coming soon*`
+              } ratios\n\n**Bot Statistics**\n **Guilds**: ${
+                client.guilds.cache.size
+              }\n **Users**: ${client.guilds.cache
+                .map((g) => g.memberCount)
+                .reduce((a, c) => a + c)}`
             )
             .setFooter({
               text: `Ratio Bot • Created by jonah#1234`,
