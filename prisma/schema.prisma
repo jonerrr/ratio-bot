@@ -17,3 +17,21 @@ model Ratio {
   expire   Int?
   related  String @unique
 }
+
+model User {
+  id         String   @id @map("_id")
+  voteExpire Int
+  emojis     Emojis[]
+}
+
+enum Emojis {
+  RED
+  WHITE
+  BLACK
+  PURPLE
+  BLUE
+  GREEN
+  YELLOW
+  ORANGE
+  BROWN
+}
