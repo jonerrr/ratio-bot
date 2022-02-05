@@ -5,25 +5,38 @@ import {
   MessageEmbed,
   MessageReaction,
   PartialMessageReaction,
-  SnowflakeUtil,
+  // SnowflakeUtil,
 } from "discord.js";
-import { chart } from "highcharts";
+// import { chart } from "highcharts";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { REST } from "@discordjs/rest";
 import * as Sentry from "@sentry/node";
 import { Routes } from "discord-api-types/v9";
+import { Emojis } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { Api } from "@top-gg/sdk";
+
 import { config } from "dotenv";
 
 config();
-import { numberEmojis, votedEmojis, voteRow, md, loadingEmbed } from "./util";
+import { app } from "./vote";
+import {
+  numberEmojis,
+  voteRow,
+  md,
+  loadingEmbed,
+  getRatioCount,
+  checkUser,
+  emojiList,
+  chooseEmojiRow,
+} from "./util";
 
+const topGG = new Api(process.env.TOPGG_TOKEN);
+app.listen(3000);
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   tracesSampleRate: 0.25,
 });
-const topGG = new Api(process.env.TOPGG_TOKEN);
 const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
@@ -34,7 +47,7 @@ const client = new Client({
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
 const rest = new REST({ version: "9" }).setToken(process.env.TOKEN);
-const prisma = new PrismaClient();
+export const prisma = new PrismaClient();
 
 let cacheExpire: number = Date.now();
 
@@ -60,6 +73,9 @@ client.on("ready", async () => {
       .addBooleanOption((option) =>
         option.setName("global").setDescription("Global statistics")
       ),
+    new SlashCommandBuilder()
+      .setName("emoji")
+      .setDescription("Set emoji color (Vote required)"),
   ].map((command) => command.toJSON());
 
   await rest.put(
@@ -72,16 +88,13 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", async (message: Message) => {
-  if (
-    message.author.bot ||
-    message.content.match(/(?:^|\W)ratio(?:$|\W)/gim).length === 0
-  )
-    return;
+  const match = message.content.match(/(?:^|\W)ratio(?:$|\W)/gim);
+  if (message.author.bot || !match || match.length === 0) return;
 
   try {
-    const emoji: string = (await topGG.hasVoted(message.author.id))
-      ? votedEmojis[Math.floor(Math.random() * votedEmojis.length)]
-      : process.env.EMOJI;
+    const emoji = (await checkUser(message.author.id, false)) as string;
+    // ? ratioEmojis[Math.floor(Math.random() * ratioEmojis.length)]
+    // : ratioEmojis[0];
 
     await message.react(emoji);
     let msg: Message;
@@ -141,7 +154,7 @@ client.on("messageCreate", async (message: Message) => {
       status: "idle",
       activities: [
         {
-          name: `${(await prisma.ratio.count()) / 2} ratios`,
+          name: `${await getRatioCount()} ratios`,
           type: "WATCHING",
         },
       ],
@@ -159,23 +172,76 @@ client.on("messageCreate", async (message: Message) => {
 });
 
 client.on("interactionCreate", async (interaction) => {
+  if (interaction.isSelectMenu()) {
+    const data = interaction.customId.split("_");
+    // if (interaction.user.id !== data[1])
+    await prisma.user.update({
+      where: { id: data[1] },
+      // Just in case there are duplicates (IDK if this can actually happen)
+      data: { emojis: [...new Set(interaction.values as Emojis[])] },
+    });
+
+    return await interaction.reply({
+      embeds: [
+        new MessageEmbed()
+          .setTitle("Emoji Colors Updated")
+          .setDescription(
+            `Currently selected emojis:\n${(
+              (await checkUser(interaction.user.id, true)) as string[]
+            ).join("")}`
+          )
+          .setColor("RANDOM"),
+      ],
+      ephemeral: true,
+    });
+  }
+
   if (!interaction.isCommand()) return;
 
-  // All of this is very repetitive and will be refactored later
+  const operation: any = {};
+  const notGlobal =
+    !interaction.options.getBoolean("global") && interaction.inGuild();
+  if (notGlobal) operation.serverId = interaction.guild.id;
 
   switch (interaction.commandName) {
+    case "emoji":
+      return await interaction.reply(
+        (await topGG.hasVoted(interaction.user.id))
+          ? {
+              embeds: [
+                new MessageEmbed()
+                  .setTitle("Set Emoji Color")
+                  .setDescription(
+                    `Currently selected emojis:\n${(
+                      (await checkUser(interaction.user.id, true)) as string[]
+                    ).join("")}`
+                  )
+                  .setColor("RANDOM"),
+              ],
+              components: [chooseEmojiRow(interaction.user.id)],
+              ephemeral: true,
+            }
+          : {
+              embeds: [
+                new MessageEmbed()
+                  .setFooter({
+                    text: "You haven't voted yet!",
+                  })
+                  .setColor("DARK_RED"),
+              ],
+              components: [voteRow],
+              ephemeral: true,
+            }
+      );
+
     case "leaderboard":
       await interaction.reply({
         embeds: [loadingEmbed],
       });
 
-      const operation: any = {
-        orderBy: { likes: "desc" },
-        take: 10,
-      };
+      operation.orderBy = { likes: "desc" };
+      operation.take = 10;
 
-      if (!interaction.options.getBoolean("global") && interaction.inGuild())
-        operation.where = { serverId: interaction.guild.id };
       const ratios = await prisma.ratio.findMany(operation);
 
       let desc = "";
@@ -191,10 +257,7 @@ client.on("interactionCreate", async (interaction) => {
           new MessageEmbed()
             .setTitle(
               `Ratio Leaderboard ${
-                !interaction.options.getBoolean("global") &&
-                interaction.inGuild()
-                  ? `(${interaction.guild.name})`
-                  : "(global)"
+                notGlobal ? `for ${interaction.guild.name}` : "Globally"
               }`
             )
             .setColor("RANDOM")
@@ -210,11 +273,7 @@ client.on("interactionCreate", async (interaction) => {
       break;
     case "stats":
       await interaction.reply({
-        embeds: [
-          new MessageEmbed()
-            .setDescription("Loading <a:loading:921882048216576020>")
-            .setColor("YELLOW"),
-        ],
+        embeds: [loadingEmbed],
       });
 
       //TODO make a chart for ratios
@@ -227,29 +286,15 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.editReply({
         embeds: [
           new MessageEmbed()
-            // .setTitle(
-            //   `Ratio Statistics ${
-            //     !interaction.options.getBoolean("global") &&
-            //     interaction.inGuild()
-            //       ? `(${interaction.guild.name})`
-            //       : "(global)"
-            //   }`
-            // )
             .setColor("RANDOM")
             .setDescription(
               `**Ratio Statistics ${
-                !interaction.options.getBoolean("global") &&
-                interaction.inGuild()
-                  ? `(${interaction.guild.name})`
-                  : "(global)"
-              }**\n${
-                !interaction.options.getBoolean("global") &&
-                interaction.inGuild()
-                  ? (await prisma.ratio.count({
-                      where: { serverId: interaction.guild.id },
-                    })) / 2
-                  : (await prisma.ratio.count()) / 2
-              } ratios\n\n**Bot Statistics**\n **Guilds**: ${
+                notGlobal ? `for ${interaction.guild.name}` : "Globally"
+              }**\n**Ratios**: ${
+                notGlobal
+                  ? await getRatioCount(interaction.guild.id)
+                  : await getRatioCount()
+              }\n\n**Bot Statistics**\n **Guilds**: ${
                 client.guilds.cache.size
               }\n **Users**: ${client.guilds.cache
                 .map((g) => g.memberCount)
@@ -275,11 +320,7 @@ const manageReaction = async (
   try {
     if (reaction.partial) await reaction.fetch();
 
-    if (
-      ![process.env.EMOJI, ...votedEmojis].includes(
-        `<:${reaction.emoji.name}:${reaction.emoji.id}>`
-      )
-    )
+    if (!emojiList.includes(`<:${reaction.emoji.name}:${reaction.emoji.id}>`))
       return;
 
     await prisma.ratio.update({
