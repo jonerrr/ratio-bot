@@ -15,6 +15,7 @@ import { Routes } from "discord-api-types/v9";
 import { Emojis } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { Api } from "@top-gg/sdk";
+import { AutoPoster } from "topgg-autoposter";
 
 import { config } from "dotenv";
 
@@ -46,6 +47,7 @@ const client = new Client({
   ],
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
+AutoPoster(process.env.TOPGG_TOKEN, client);
 const rest = new REST({ version: "9" }).setToken(process.env.TOKEN);
 export const prisma = new PrismaClient();
 
