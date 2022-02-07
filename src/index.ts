@@ -47,7 +47,7 @@ const client = new Client({
   ],
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
-AutoPoster(process.env.TOPGG_TOKEN, client);
+if (process.env.mode !== "DEV") AutoPoster(process.env.TOPGG_TOKEN, client);
 const rest = new REST({ version: "9" }).setToken(process.env.TOKEN);
 export const prisma = new PrismaClient();
 
@@ -90,8 +90,8 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", async (message: Message) => {
-  const match = message.content.match(/(?:^|\W)ratio(?:$|\W)/gim);
-  if (message.author.bot || !match || match.length === 0) return;
+  if (message.author.bot || !message.content.match(/(?:^|\W)ratio(?:$|\W)/gim))
+    return;
 
   try {
     const emoji = (await checkUser(message.author.id, false)) as string;
@@ -176,7 +176,6 @@ client.on("messageCreate", async (message: Message) => {
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isSelectMenu()) {
     const data = interaction.customId.split("_");
-    // if (interaction.user.id !== data[1])
     await prisma.user.update({
       where: { id: data[1] },
       // Just in case there are duplicates (IDK if this can actually happen)
@@ -203,7 +202,7 @@ client.on("interactionCreate", async (interaction) => {
   const operation: any = {};
   const notGlobal =
     !interaction.options.getBoolean("global") && interaction.inGuild();
-  if (notGlobal) operation.serverId = interaction.guild.id;
+  if (notGlobal) operation.where = { serverId: interaction.guild.id };
 
   switch (interaction.commandName) {
     case "emoji":
@@ -251,7 +250,7 @@ client.on("interactionCreate", async (interaction) => {
         const related = await prisma.ratio.findUnique({
           where: { id: ratios[i].related },
         });
-        desc += `${numberEmojis[i]} ${ratios[i].username} ${process.env.EMOJI}**${ratios[i].likes}** ${md}≥${md} ${related.username} ${process.env.EMOJI}**${related.likes}**\n\n`;
+        desc += `${numberEmojis[i]} ${ratios[i].username} ${emojiList[0]}**${ratios[i].likes}** ${md}≥${md} ${related.username} ${emojiList[0]}**${related.likes}**\n\n`;
       }
 
       await interaction.editReply({
