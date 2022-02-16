@@ -33,7 +33,7 @@ import {
 } from "./util";
 
 const topGG = new Api(process.env.TOPGG_TOKEN);
-app.listen(3000);
+app.listen(3333);
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   tracesSampleRate: 0.25,
