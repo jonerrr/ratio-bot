@@ -27,5 +27,7 @@ steps:
         from_secret: TOPGG_WEBHOOK
       VOTE_URL:
         from_secret: VOTE_URL
+      DATABASE_URL:
+        from_secret: DATABASE_URL
     commands:
       - node dist/src/index
