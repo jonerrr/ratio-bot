@@ -12,5 +12,20 @@ steps:
       - npm i
       - npm run build
   - name: start
+    environment:
+      MODE:
+        from_secret: MODE
+      GUILD:
+        from_secret: GUILD
+      TOKEN:
+        from_secret: TOKEN
+      SENTRY_DSN:
+        from_secret: SENTRY_DSN
+      TOPGG_TOKEN:
+        from_secret: TOPGG_TOKEN
+      TOPGG_WEBHOOK:
+        from_secret: TOPGG_WEBHOOK
+      VOTE_URL:
+        from_secret: VOTE_URL
     commands:
       - node dist/src/index
