@@ -9,7 +9,8 @@ platform:
 steps:
   - name: build
     commands:
+      - npm i
       - npm run build
   - name: start
     commands:
-      - npm start
+      - node dist/src/index
