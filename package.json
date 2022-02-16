@@ -9,7 +9,7 @@
   },
   "keywords": [],
   "author": "jonah",
-  "license": "AGPL-3.0-or-later",
+  "license": "MIT",
   "dependencies": {
     "@discordjs/builders": "^0.8.2",
     "@discordjs/rest": "^0.1.0-canary.0",

@@ -1,0 +1,15 @@
+kind: pipeline
+type: exec
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  - name: build
+    commands:
+      - npm run build
+  - name: start
+    commands:
+      - npm start
