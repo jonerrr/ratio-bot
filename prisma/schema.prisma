@@ -19,9 +19,10 @@ model Ratio {
 }
 
 model User {
-  id         String   @id @map("_id")
-  voteExpire Int
-  emojis     Emojis[]
+  id          String   @id @map("_id")
+  voteExpire  Int
+  emojis      Emojis[]
+  customEmoji String?
 }
 
 enum Emojis {
@@ -34,4 +35,5 @@ enum Emojis {
   YELLOW
   ORANGE
   BROWN
+  THUMBSUP
 }

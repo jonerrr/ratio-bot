@@ -31,8 +31,9 @@ import {
   emojiList,
   chooseEmojiRow,
 } from "./util";
+import emojis from "../emojis.json";
 
-const topGG = new Api(process.env.TOPGG_TOKEN);
+// const topGG = new Api(process.env.TOPGG_TOKEN);
 app.listen(3333);
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -47,7 +48,7 @@ const client = new Client({
   ],
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
-if (process.env.mode !== "DEV") AutoPoster(process.env.TOPGG_TOKEN, client);
+if (process.env.MODE !== "dev") AutoPoster(process.env.TOPGG_TOKEN, client);
 const rest = new REST({ version: "9" }).setToken(process.env.TOKEN);
 export const prisma = new PrismaClient();
 
@@ -67,7 +68,7 @@ client.on("ready", async () => {
       .setName("leaderboard")
       .setDescription("Ratio Leaderboard")
       .addBooleanOption((option) =>
-        option.setName("global").setDescription("Fetch global leaderboard")
+        option.setName("global").setDescription("Global leaderboard")
       ),
     new SlashCommandBuilder()
       .setName("stats")
@@ -77,11 +78,14 @@ client.on("ready", async () => {
       ),
     new SlashCommandBuilder()
       .setName("emoji")
-      .setDescription("Set emoji color (Vote required)"),
+      .setDescription("Set emoji color (Vote required)")
+      .addStringOption((option) =>
+        option.setName("emoji").setDescription("Use your own emoji")
+      ),
   ].map((command) => command.toJSON());
 
   await rest.put(
-    Routes.applicationGuildCommands(client.user.id, process.env.GUILD),
+    Routes.applicationGuildCommands(client.user.id, process.env.TEST_GUILD),
     { body: commands }
   );
   await rest.put(Routes.applicationCommands(client.user.id), {
@@ -90,15 +94,26 @@ client.on("ready", async () => {
 });
 
 client.on("messageCreate", async (message: Message) => {
+  if (process.env.MODE === "dev" && message.content === "ping")
+    await message.channel.send("pong");
+
   if (message.author.bot || !message.content.match(/(?:^|\W)ratio(?:$|\W)/gim))
     return;
 
   try {
-    const emoji = (await checkUser(message.author.id, false)) as string;
-    // ? ratioEmojis[Math.floor(Math.random() * ratioEmojis.length)]
-    // : ratioEmojis[0];
+    let emoji = (await checkUser(message.author.id, false)) as string;
+    let invalidEmoji: boolean = false;
 
-    await message.react(emoji);
+    await message.react(emoji).catch(async (e) => {
+      if (e.code !== 10014) {
+        console.log(e);
+        Sentry.captureException(e);
+        return;
+      }
+      emoji = emojiList[0];
+      await message.react(emoji);
+      invalidEmoji = true;
+    });
     let msg: Message;
 
     if (message.reference)
@@ -151,12 +166,30 @@ client.on("messageCreate", async (message: Message) => {
       data,
     });
 
+    if (invalidEmoji) {
+      await prisma.user.update({
+        where: { id: message.author.id },
+        data: { customEmoji: null },
+      });
+      await message.reply({
+        embeds: [
+          new MessageEmbed()
+            .setFooter({
+              text: `I noticed you didn't set a valid custom emoji so it was removed.`,
+            })
+            .setColor("RED"),
+        ],
+      });
+    }
+
     if (cacheExpire > Date.now()) return;
     client.user.setPresence({
       status: "idle",
       activities: [
         {
-          name: `${await getRatioCount()} ratios`,
+          name: `${await getRatioCount()} ratios ${
+            process.env.MODE === "dev" ? "(dev)" : ""
+          }`,
           type: "WATCHING",
         },
       ],
@@ -168,7 +201,7 @@ client.on("messageCreate", async (message: Message) => {
 
     cacheExpire = Date.now() + 60000;
   } catch (e) {
-    if (process.env.mode === "DEV") console.log(e);
+    if (process.env.MODE === "dev") console.log(e);
     Sentry.captureException(e);
   }
 });
@@ -178,8 +211,10 @@ client.on("interactionCreate", async (interaction) => {
     const data = interaction.customId.split("_");
     await prisma.user.update({
       where: { id: data[1] },
-      // Just in case there are duplicates (IDK if this can actually happen)
-      data: { emojis: [...new Set(interaction.values as Emojis[])] },
+      data: {
+        emojis: [...new Set(interaction.values as Emojis[])],
+        customEmoji: null,
+      },
     });
 
     return await interaction.reply({
@@ -206,34 +241,61 @@ client.on("interactionCreate", async (interaction) => {
 
   switch (interaction.commandName) {
     case "emoji":
-      return await interaction.reply(
-        (await topGG.hasVoted(interaction.user.id))
-          ? {
-              embeds: [
-                new MessageEmbed()
-                  .setTitle("Set Emoji Color")
-                  .setDescription(
-                    `Currently selected emojis:\n${(
-                      (await checkUser(interaction.user.id, true)) as string[]
-                    ).join("")}`
-                  )
-                  .setColor("RANDOM"),
-              ],
-              components: [chooseEmojiRow(interaction.user.id)],
-              ephemeral: true,
-            }
-          : {
-              embeds: [
-                new MessageEmbed()
-                  .setFooter({
-                    text: "You haven't voted yet!",
-                  })
-                  .setColor("DARK_RED"),
-              ],
-              components: [voteRow],
-              ephemeral: true,
-            }
-      );
+      const user = await prisma.user.findFirst({
+        where: { id: interaction.user.id, voteExpire: { gte: Date.now() } },
+      });
+
+      if (!user)
+        return interaction.reply({
+          embeds: [
+            new MessageEmbed()
+              .setFooter({
+                text: "You need to vote to use this command!",
+                iconURL:
+                  "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/twitter/282/prohibited_1f6ab.png",
+              })
+              .setColor("RANDOM"),
+          ],
+          components: [voteRow],
+          ephemeral: true,
+        });
+
+      const customEmoji = interaction.options.getString("emoji");
+      if (customEmoji && customEmoji.match(/(<a?)?:\w+:(\d{18}>)?/g)) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { customEmoji },
+        });
+        return await interaction.reply({
+          embeds: [
+            new MessageEmbed()
+              .setFooter({
+                text: "Emoji Updated!",
+                iconURL:
+                  "https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/120/twitter/282/check-mark-button_2705.png",
+              })
+              .setColor("RANDOM"),
+          ],
+          ephemeral: true,
+        });
+      }
+
+      return await interaction.reply({
+        embeds: [
+          new MessageEmbed()
+            .setTitle("Set Emoji Color")
+            .setDescription(
+              `Currently selected emoji(s):\n${
+                user.customEmoji
+                  ? user.customEmoji
+                  : user.emojis.map((e) => emojis[e]).join("")
+              }`
+            )
+            .setColor("RANDOM"),
+        ],
+        components: [chooseEmojiRow(interaction.user.id)],
+        ephemeral: true,
+      });
 
     case "leaderboard":
       await interaction.reply({
@@ -320,7 +382,7 @@ const manageReaction = async (
 ) => {
   try {
     if (reaction.partial) await reaction.fetch();
-
+    //TODO CHECK IF MESSAGE ID IS IN THE DATABASE AND IF IT IS THEN DO SHIT
     if (!emojiList.includes(`<:${reaction.emoji.name}:${reaction.emoji.id}>`))
       return;
 
@@ -329,7 +391,7 @@ const manageReaction = async (
       data: { likes: reaction.count },
     });
   } catch (e) {
-    if (process.env.mode === "DEV") console.log(e);
+    if (process.env.MODE === "dev") console.log(e);
     Sentry.captureException(e);
   }
 };
