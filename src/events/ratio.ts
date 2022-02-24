@@ -69,7 +69,7 @@ export const manageRatio = async (message: Message) => {
         related: message.id,
       });
     }
-    console.log(data);
+
     await prisma.ratio.createMany({
       data,
     });
