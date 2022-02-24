@@ -10,10 +10,16 @@ export const app = express();
 app.post(
   "/voted",
   webhook.listener(async (vote) => {
-    // console.log(vote);
-    if (vote.type !== "upvote") return;
+    if (process.env.MODE === "dev") console.log(vote);
+    if (
+      vote.type !== "upvote" ||
+      vote.user ===
+        process.env
+          .OWNER_ID /* Owner should have a ridiculous number set for voteExpire */
+    )
+      return;
     const user = await prisma.user.findUnique({ where: { id: vote.user } });
-    if (user)
+    if (user && user)
       await prisma.user.update({
         where: { id: vote.user },
         data: { voteExpire: Date.now() + 43200000 },
@@ -24,6 +30,7 @@ app.post(
           id: vote.user,
           emojis: Object.keys(emojis) as Emojis[],
           voteExpire: Date.now() + 43200000,
+          customEmoji: null,
         },
       });
   })

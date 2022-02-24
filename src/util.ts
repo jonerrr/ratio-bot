@@ -37,6 +37,10 @@ const menuOptions: MessageSelectOptionData[] = Object.keys(emojis).map((e) => {
   };
 });
 
+/**
+ * Menu for selecting ratio emoji
+ * @param {string} user - Discord ID of user for the custom ID
+ */
 export const chooseEmojiRow = (user: string): MessageActionRow =>
   new MessageActionRow().addComponents(
     new MessageSelectMenu()
@@ -56,18 +60,29 @@ export const loadingEmbed = new MessageEmbed()
 
 export const md = "`";
 
+/**
+ * Get count of ratios in server (total amount of ratios in database / 2)
+ * @param {string} serverId - Guild ID
+ */
 export const getRatioCount = async (serverId?: string): Promise<number> =>
   serverId
     ? Math.trunc((await prisma.ratio.count({ where: { serverId } })) / 2)
     : Math.trunc((await prisma.ratio.count()) / 2);
 
+/**
+ * Get ratio emoji, returns red if the user hasn't voted
+ * @param {string} id - Discord ID of user
+ * @param {string} all - Respond with all selected emojis instead of a random one
+ */
 export const checkUser = async (
   id: string,
   all: boolean
 ): Promise<string | string[]> => {
-  const user = await prisma.user.findUnique({ where: { id } });
-  if (!user || user.voteExpire < Date.now())
-    return all ? [emojis.RED] : emojis.RED;
+  const user = await prisma.user.findFirst({
+    where: { id, voteExpire: { gte: Date.now() } },
+  });
+  if (!user) return all ? [emojis.RED] : emojis.RED;
+  if (user.customEmoji) return all ? [user.customEmoji] : user.customEmoji;
 
   const emojiArr = user.emojis.map((e) => emojis[e]);
 
