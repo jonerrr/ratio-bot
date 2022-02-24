@@ -7,6 +7,28 @@ import {
 } from "discord.js";
 import { prisma } from "./index";
 import emojis from "../emojis.json";
+import { SlashCommandBuilder } from "@discordjs/builders";
+
+export const commands = [
+  new SlashCommandBuilder()
+    .setName("leaderboard")
+    .setDescription("Ratio Leaderboard")
+    .addBooleanOption((option) =>
+      option.setName("global").setDescription("Global leaderboard")
+    ),
+  new SlashCommandBuilder()
+    .setName("stats")
+    .setDescription("Ratio Statistics")
+    .addBooleanOption((option) =>
+      option.setName("global").setDescription("Global statistics")
+    ),
+  new SlashCommandBuilder()
+    .setName("emoji")
+    .setDescription("Set emoji color (Vote required)")
+    .addStringOption((option) =>
+      option.setName("emoji").setDescription("Use your own emoji")
+    ),
+].map((command) => command.toJSON());
 
 export let numberEmojis: string[] = [
   ":one:",
